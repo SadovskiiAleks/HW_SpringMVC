@@ -12,7 +12,7 @@ public interface PostRepository {
 
     public Optional<Post> getById(long id);
 
-    public Post save(Post post);
+    public Optional<Post> save(Post post);
 
     public void removeById(long id);
 

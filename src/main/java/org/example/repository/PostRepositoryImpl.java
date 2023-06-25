@@ -1,14 +1,14 @@
 package org.example.repository;
 
-import org.springframework.stereotype.Repository;
 import org.example.model.Post;
+import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Repository
 public class PostRepositoryImpl implements PostRepository {
@@ -18,24 +18,40 @@ public class PostRepositoryImpl implements PostRepository {
 
 
     public List<Post> all() {
-        return new ArrayList<>(mapOfPost.values());
+        return mapOfPost.values().stream().filter(x -> x.isRemoved() == false).collect(Collectors.toList());
     }
 
     public Optional<Post> getById(long id) {
-        return Optional.ofNullable(mapOfPost.get(id));
+        if (mapOfPost.containsKey(id) && !mapOfPost.get(id).isRemoved()) {
+            return Optional.ofNullable(mapOfPost.get(id));
+        } else {
+            return Optional.ofNullable(null);
+        }
     }
 
-    public Post save(Post post) {
+    public Optional<Post> save(Post post) {
+
         if (post.getId() == startID) {
             post.setId(lastId.incrementAndGet());
+            mapOfPost.putIfAbsent(post.getId(), post);
+
         } else if (!mapOfPost.containsKey(post.getId())) {
             post.setId(lastId.incrementAndGet());
+            mapOfPost.putIfAbsent(post.getId(), post);
+
+        } else if (mapOfPost.containsKey(post.getId()) && mapOfPost.get(post.getId()).isRemoved()) {
+            return Optional.ofNullable(null);
+
+        } else if (mapOfPost.containsKey(post.getId())) {
+            mapOfPost.putIfAbsent(post.getId(), post);
         }
-        mapOfPost.putIfAbsent(post.getId(), post);
-        return post;
+
+        return Optional.ofNullable(post);
     }
 
     public void removeById(long id) {
-        mapOfPost.remove(id);
+        if (mapOfPost.containsKey(id)) {
+            mapOfPost.get(id).setRemoved(true);
+        }
     }
 }
